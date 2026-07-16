@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSTF Monitor - Dashboard Panel Utama</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f59e0b">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/6821/6821006.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #090d16; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        :-webkit-full-screen { background-color: #030712; }
+        ::fullscreen { background-color: #030712; }
+    </style>
+</head>
+<body class="bg-[#030712] text-gray-100 font-sans min-h-screen flex flex-col transition-all duration-300 overflow-x-hidden">
+
+    <header class="bg-gray-900/90 border-b border-gray-800/80 px-8 py-5 flex justify-between items-center shadow-xl relative z-40">
+        <div class="flex items-center gap-5">
+            <button onclick="toggleMenu()" class="text-amber-500 p-2 hover:bg-gray-800 rounded-lg focus:outline-none transition active:scale-95" id="hamburgerBtn">
+                <i class="fas fa-bars text-3xl"></i>
+            </button>
+            <div class="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30 hidden sm:block">
+                <i class="fas fa-desktop text-3xl text-amber-500 animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl lg:text-4xl font-black tracking-wider text-amber-500 uppercase flex items-center gap-3">
+                    DSTF MONITOR <span class="text-sm bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full border border-amber-500/40 hidden md:inline-block">LIVE CLOUD</span>
+                </h1>
+                <p class="text-base text-gray-400 mt-1 font-mono flex items-center gap-2">
+                    <i class="fas fa-clock text-amber-500/70"></i> <span id="realtimeClock" class="font-bold">Memuat waktu...</span>
+                </p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4 text-right hidden sm:flex font-mono text-base md:text-lg font-bold text-gray-400">
+            <button id="pwaInstallBtn" class="hidden bg-emerald-500 hover:bg-emerald-600 text-gray-950 px-4 py-2 rounded-xl text-sm font-black transition items-center gap-2 active:scale-95 shadow-lg">
+                <i class="fas fa-download"></i> INSTAL APLIKASI
+            </button>
+            <span id="voiceLoopBadge" class="hidden text-xs bg-red-500/20 text-red-400 border border-red-500/40 px-3 py-1.5 rounded-xl font-sans font-black tracking-wider items-center gap-1.5 animate-pulse">
+                <i class="fas fa-circle text-[8px]"></i> LOOP SUARA AKTIF
+            </span>
+            <button onclick="speakCurrentTabSummary()" class="bg-amber-500/10 border border-amber-500/30 text-amber-500 hover:bg-amber-500 hover:text-gray-950 p-2 rounded-xl transition active:scale-95">
+                <i class="fas fa-volume-up text-xl"></i>
+            </button>
+            <span id="headerShiftInfo" class="bg-gray-800 px-4 py-2 rounded-lg">SHIFT LOG: SYNC...</span>
+        </div>
+    </header>
+
+    <div id="sidebarMenu" class="fixed inset-y-0 left-0 w-80 bg-gray-900 border-r border-gray-800 p-6 flex flex-col justify-between shadow-2xl transition-transform duration-300 transform -translate-x-full z-50">
+        <div>
+            <div class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
+                <div class="flex items-center gap-2 text-amber-500 font-black tracking-wider text-lg">
+                    <i class="fas fa-cogs"></i> CONTROL CENTER
+                </div>
+                <button onclick="closeMenu()" class="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <button onclick="openModal(); closeMenu();" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 px-4 py-3 rounded-xl text-base font-extrabold flex items-center gap-3 transition active:scale-95 shadow-lg shadow-amber-500/10">
+                    <i class="fas fa-file-excel text-xl"></i>
+                    <span>Update Data Excel (Global)</span>
+                </button>
+
+                <button id="btnAutoScroll" onclick="toggleAutoScroll(); closeMenu();" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-3 rounded-xl text-base font-bold flex items-center gap-3 border border-gray-700 transition">
+                    <i class="fas fa-play text-emerald-500 text-xl" id="scrollIcon"></i>
+                    <span>Aktifkan Auto-Scroll (Lokal)</span>
+                </button>
+
+                <div class="bg-gray-950 border border-gray-800 p-4 rounded-xl flex flex-col gap-2">
+                    <label class="text-xs text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-repeat text-amber-500"></i> Pengulangan Suara Otomatis:
+                    </label>
+                    <div class="grid grid-cols-3 gap-1.5 mt-1">
+                        <button onclick="setVoiceLoop('OFF')" id="loopBtn-OFF" class="py-2 rounded-lg text-xs font-black border transition bg-amber-500 text-gray-950 border-amber-500">OFF</button>
+                        <button onclick="setVoiceLoop('30')" id="loopBtn-30" class="py-2 rounded-lg text-xs font-black border border-gray-800 bg-gray-900 text-gray-400 transition hover:text-white">30s</button>
+                        <button onclick="setVoiceLoop('60')" id="loopBtn-60" class="py-2 rounded-lg text-xs font-black border border-gray-800 bg-gray-900 text-gray-400 transition hover:text-white">1m</button>
+                    </div>
+                </div>
+
+                <button onclick="speakCurrentTabSummary(); closeMenu();" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-3 rounded-xl text-base font-bold flex items-center gap-3 border border-gray-700 transition">
+                    <i class="fas fa-volume-up text-amber-500 text-xl"></i>
+                    <span>Tes Suara Ringkasan</span>
+                </button>
+
+                <button onclick="toggleFullscreen(); closeMenu();" class="w-full bg-indigo-950/60 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-700/50 px-4 py-3 rounded-xl text-base font-bold flex items-center gap-3 transition">
+                    <i class="fas fa-expand text-xl" id="fsIcon"></i>
+                    <span id="fsText">Layar Penuh (Full Screen)</span>
+                </button>
+            </div>
+        </div>
+        <div class="border-t border-gray-800 pt-4 text-xs text-gray-500 font-mono">
+            <p>Cloud Firebase & PWA Connected</p>
+        </div>
+    </div>
+
+    <div id="sidebarOverlay" onclick="closeMenu()" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-40"></div>
+
+    <main class="flex-1 p-6 lg:p-8 max-w-[1920px] mx-auto w-full flex flex-col gap-8">
+        
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-4 bg-gradient-to-br from-amber-950/40 to-gray-950 border-2 border-amber-500/30 p-6 rounded-3xl flex flex-col justify-between shadow-2xl">
+                <div>
+                    <span class="text-xs text-amber-400 font-bold tracking-widest uppercase block mb-1">ARMADA</span>
+                    <h2 class="text-xl font-black text-gray-100">Physical Availability (PA)</h2>
+                </div>
+                <div class="my-4"><span class="text-6xl font-black text-amber-500 font-mono" id="statPA">0%</span></div>
+                <div class="w-full bg-gray-900 rounded-full h-3 border border-gray-800 overflow-hidden">
+                    <div id="paProgressBar" class="bg-gradient-to-r from-amber-600 to-amber-400 h-full rounded-full transition-all duration-1000" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 bg-gradient-to-br from-teal-950/40 to-gray-950 border-2 border-teal-500/20 p-6 rounded-3xl flex flex-col justify-between shadow-xl">
+                <div>
+                    <span class="text-xs text-teal-400 font-bold tracking-widest uppercase block mb-1">MANPOWER BRIEFING</span>
+                    <h2 class="text-xl font-black text-gray-100">Total Kehadiran Kru</h2>
+                </div>
+                <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+                    <div class="bg-gray-900/80 p-2 rounded-xl"><span class="text-2xl font-mono font-black text-teal-400" id="statManTotal">0</span><p class="text-[11px] text-gray-500 font-bold">TOTAL</p></div>
+                    <div class="bg-gray-900/80 p-2 rounded-xl"><span class="text-2xl font-mono font-black text-emerald-400" id="statManHadir">0</span><p class="text-[11px] text-gray-500 font-bold">HADIR</p></div>
+                    <div class="bg-gray-900/80 p-2 rounded-xl"><span class="text-2xl font-mono font-black text-red-400" id="statManAbsen">0</span><p class="text-[11px] text-gray-500 font-bold">S/I/A</p></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 grid grid-cols-3 gap-4">
+                <div class="bg-gradient-to-b from-blue-950/40 to-gray-950 border border-blue-500/20 p-4 rounded-2xl flex flex-col justify-between text-center"><span class="text-xs text-blue-400 font-bold uppercase">Total Unit</span><span class="text-4xl font-black text-blue-400 font-mono" id="statTotal">0</span></div>
+                <div class="bg-gradient-to-b from-emerald-950/40 to-gray-950 border border-emerald-500/20 p-4 rounded-2xl flex flex-col justify-between text-center"><span class="text-xs text-emerald-400 font-bold uppercase">Unit Ready</span><span class="text-4xl font-black text-emerald-400 font-mono" id="statReady">0</span></div>
+                <div class="bg-gradient-to-b from-red-950/40 to-gray-950 border border-red-500/20 p-4 rounded-2xl flex flex-col justify-between text-center"><span class="text-xs text-red-400 font-bold uppercase">Breakdown</span><span class="text-4xl font-black text-red-500 font-mono" id="statBreakdown">0</span></div>
+            </div>
+        </section>
+
+        <div class="flex border-b border-gray-800 gap-4">
+            <button onclick="switchTab('attendance')" id="tabBtnAttendance" class="py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition">
+                <i class="fas fa-clipboard-user"></i> 1. ABSENSI & PLOTTING TIM
+            </button>
+            <button onclick="switchTab('breakdown')" id="tabBtnBreakdown" class="py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition">
+                <i class="fas fa-tools"></i> 2. RINCIAN UNIT BREAKDOWN
+            </button>
+        </div>
+
+        <section id="sectionAttendance" class="flex flex-col gap-6">
+            <div class="flex flex-col sm:flex-row gap-4 justify-between bg-gray-900/60 p-5 rounded-2xl border border-gray-800/80">
+                <div class="flex flex-wrap gap-3" id="attendanceFilterContainer"></div>
+                <div class="text-base text-gray-400 font-mono font-bold bg-gray-800 px-4 py-2 rounded-lg" id="crewCountDisplay">Menampilkan 0 data</div>
+            </div>
+            <div class="bg-gray-900 border-2 border-gray-800 rounded-2xl overflow-hidden shadow-2xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-800 text-gray-300 uppercase text-sm font-bold border-b-2 border-gray-700">
+                            <th class="py-5 px-6 text-center w-20">No</th>
+                            <th class="py-5 px-6">Jabatan</th>
+                            <th class="py-5 px-6">Nama Lengkap</th>
+                            <th class="py-5 px-6 text-center w-36">Kehadiran</th>
+                            <th class="py-5 px-6">Plotting Tugas / Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800/80" id="attendanceTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="sectionBreakdown" class="hidden flex flex-col gap-6">
+            <div class="flex flex-col sm:flex-row gap-4 justify-between bg-gray-900/60 p-5 rounded-2xl border border-gray-800/80">
+                <div class="flex flex-wrap gap-3" id="filterContainer"></div>
+                <div class="text-base text-gray-400 font-mono font-bold bg-gray-800 px-4 py-2 rounded-lg" id="rowCountDisplay">Menampilkan 0 data</div>
+            </div>
+            <div class="bg-gray-900 border-2 border-gray-800 rounded-2xl overflow-hidden shadow-2xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-800 text-gray-300 uppercase text-sm font-bold border-b-2 border-gray-700">
+                            <th class="py-5 px-6 text-center w-20">No</th>
+                            <th class="py-5 px-6">Kategori</th>
+                            <th class="py-5 px-6">Kode Unit</th>
+                            <th class="py-5 px-6 text-center">Status</th>
+                            <th class="py-5 px-6 w-1/3">Kerusakan</th>
+                            <th class="py-5 px-6">Lokasi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800/80" id="tableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div id="importModal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl">
+            <div class="bg-gray-850 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-amber-500 flex items-center gap-3"><i class="fas fa-file-excel text-2xl"></i> Input Data Shift (Global Sync)</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="block text-sm text-gray-400 font-bold mb-2">Total Unit Ready:</label><input type="number" id="readyCountInput" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-gray-200 focus:outline-none focus:border-amber-500"></div>
+                    <div><label class="block text-sm text-gray-400 font-bold mb-2">Informasi Shift & Tanggal:</label><input type="text" id="shiftInput" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-gray-200 focus:outline-none focus:border-amber-500"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
+                    <div class="flex flex-col gap-2"><label class="block text-sm text-amber-400 font-black">1. PASTE DATA ABSENSI:</label><textarea id="attendancePasteArea" rows="8" class="w-full bg-gray-950 border-2 border-gray-800 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:border-amber-500" placeholder="1&#9;Driver DT&#9;Nama&#9;Hadir&#9;Ket Kerja..."></textarea></div>
+                    <div class="flex flex-col gap-2"><label class="block text-sm text-red-400 font-black">2. PASTE DATA BREAKDOWN:</label><textarea id="excelPasteArea" rows="8" class="w-full bg-gray-950 border-2 border-gray-800 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:border-amber-500" placeholder="DT&#9;1&#9;HDT-05&#9;Breakdown&#9;Low Power..."></textarea></div>
+                </div>
+            </div>
+            <div class="bg-gray-850 px-6 py-4 border-t border-gray-800 flex justify-end gap-4">
+                <button onclick="closeModal()" class="px-5 py-2.5 text-gray-400 hover:text-white">Batal</button>
+                <button onclick="processAllExcelData()" class="bg-amber-500 hover:bg-amber-600 text-gray-950 px-6 py-2.5 rounded-xl font-extrabold shadow-lg shadow-amber-500/20">Kirim Ke Semua Monitor</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD31YeP_BW64BoEkDXtIUKBeOWrKpdZ2WY",
+            authDomain: "monitor-dstf.firebaseapp.com",
+            databaseURL: "https://monitor-dstf-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "monitor-dstf",
+            storageBucket: "monitor-dstf.firebasestorage.app",
+            messagingSenderId: "23600417985",
+            appId: "1:23600417985:web:4874f9f63088035ad1d840"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const stateRef = ref(db, 'dashboard_state');
+
+        // State Master Aplikasi Lokal
+        window.appState = { shiftInfo: "", readyCount: 0, attendance: [], breakdowns: [] };
+        window.currentActiveTab = "attendance";
+        let currentFilter = "ALL";
+        let currentAttendanceFilter = "ALL";
+        let autoScrollInterval, voiceLoopInterval;
+        let isScrolling = false, isPausing = false, scrollDirection = 1, currentVoiceLoopSetting = "OFF";
+
+        // MENGAMBIL DATA SECARA REAL-TIME DARI CLOUD (Fungsi Inti Sync HP/Monitor)
+        onValue(stateRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                window.appState = data;
+                renderDashboard();
+                if (currentVoiceLoopSetting !== "OFF") speakCurrentTabSummary();
+            }
+        });
+
+        // MENGIRIM DATA DARI EXCEL KE CLOUD
+        window.processAllExcelData = function() {
+            const bdText = document.getElementById("excelPasteArea").value.trim();
+            const attText = document.getElementById("attendancePasteArea").value.trim();
+            const readyCount = parseInt(document.getElementById("readyCountInput").value) || 0;
+            const shiftInfo = document.getElementById("shiftInput").value.trim();
+
+            let newState = { ...window.appState, readyCount, shiftInfo };
+
+            if (attText) {
+                const lines = attText.split("\n");
+                const parsedAtt = [];
+                lines.forEach(line => {
+                    const cols = line.split("\t");
+                    if (cols.length >= 3) {
+                        if (cols[0].toLowerCase().includes("no")) return;
+                        let ketKerja = cols[4] ? cols[4].trim() : "Standby/Operasi";
+                        let statusHadir = "Hadir";
+                        if (["sakit", "izin", "alpa"].includes(ketKerja.toLowerCase())) statusHadir = ketKerja;
+                        parsedAtt.push({
+                            no: parseInt(cols[0]) || 1,
+                            job: cols[1]?.trim() || "Crew",
+                            name: cols[2]?.trim() || "N/A",
+                            status: statusHadir,
+                            remark: ketKerja
+                        });
+                    }
+                });
+                if (parsedAtt.length > 0) newState.attendance = parsedAtt;
+            }
+
+            if (bdText) {
+                const rows = bdText.split("\n");
+                const parsedData = [];
+                rows.forEach(rowText => {
+                    const cols = rowText.split("\t");
+                    if (cols.length >= 5) {
+                        if (cols[0].toLowerCase().includes("kategori")) return;
+                        parsedData.push({
+                            category: cols[0].trim().toUpperCase(),
+                            no: parseInt(cols[1]) || 1,
+                            code: cols[2]?.trim() || "N/A",
+                            status: cols[3]?.trim() || "Breakdown",
+                            remark: cols[4]?.trim() || "-",
+                            location: cols[5]?.trim() || "-"
+                        });
+                    }
+                });
+                if (parsedData.length > 0) newState.breakdowns = parsedData;
+            }
+
+            // Kirim Data ke Firebase Cloud
+            set(stateRef, newState).then(() => {
+                closeModal();
+                alert("Data berhasil disinkronkan ke seluruh TV monitor!");
+            });
+        };
+
+        // UI RENDER FUNCTIONS
+        function renderDashboard() {
+            document.getElementById("headerShiftInfo").innerText = window.appState.shiftInfo || "BELUM ADA DATA";
+            const bdCount = window.appState.breakdowns?.length || 0;
+            const readyCount = parseInt(window.appState.readyCount) || 0;
+            const totalCount = bdCount + readyCount;
+            const paRatio = totalCount > 0 ? ((readyCount / totalCount) * 100).toFixed(1) : 0;
+
+            document.getElementById("statBreakdown").innerText = bdCount;
+            document.getElementById("statReady").innerText = readyCount;
+            document.getElementById("statTotal").innerText = totalCount;
+            document.getElementById("statPA").innerText = paRatio + "%";
+            document.getElementById("paProgressBar").style.width = paRatio + "%";
+
+            const attData = window.appState.attendance || [];
+            const absenCrew = attData.filter(c => ["sakit", "izin", "alpa"].includes(c.status.toLowerCase())).length;
+            document.getElementById("statManTotal").innerText = attData.length;
+            document.getElementById("statManHadir").innerText = attData.length - absenCrew;
+            document.getElementById("statManAbsen").innerText = absenCrew;
+
+            renderFilters();
+            renderAttendanceFilters();
+            renderTable(currentFilter);
+            renderAttendanceTable(currentAttendanceFilter);
+        }
+
+        // Filter & Tabel Generator
+        function renderAttendanceFilters() {
+            const container = document.getElementById("attendanceFilterContainer");
+            const data = window.appState.attendance || [];
+            const jobs = [...new Set(data.map(item => item.job))];
+            let html = `<button id="btnAttFilter-ALL" class="bg-amber-500 text-gray-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md">Semua Kru (${data.length})</button>`;
+            jobs.forEach(job => {
+                const count = data.filter(item => item.job === job).length;
+                html += `<button id="btnAttFilter-${job.replace(/\s+/g, '')}" class="bg-gray-800 text-gray-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-700 transition">${job} (${count})</button>`;
+            });
+            container.innerHTML = html;
+            
+            // Re-bind click events
+            container.querySelectorAll('button').forEach(btn => {
+                btn.onclick = () => {
+                    const id = btn.id.replace('btnAttFilter-', '');
+                    currentAttendanceFilter = id === 'ALL' ? 'ALL' : jobs.find(j => j.replace(/\s+/g, '') === id);
+                    renderAttendanceTable(currentAttendanceFilter);
+                };
+            });
+        }
+
+        function renderAttendanceTable(filter) {
+            const tbody = document.getElementById("attendanceTableBody");
+            tbody.innerHTML = '';
+            const data = window.appState.attendance || [];
+            const filtered = filter === 'ALL' ? data : data.filter(item => item.job === filter);
+            document.getElementById("crewCountDisplay").innerText = `Menampilkan ${filtered.length} personil`;
+
+            filtered.forEach(item => {
+                let badge = "bg-emerald-950 text-emerald-400";
+                if(item.status.toLowerCase() === "sakit") badge = "bg-amber-950 text-amber-400";
+                if(["izin","alpa"].includes(item.status.toLowerCase())) badge = "bg-red-950 text-red-400";
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-800/60 transition">
+                        <td class="py-4 px-6 text-center font-bold text-gray-400 font-mono text-xl">${item.no}</td>
+                        <td class="py-4 px-6 font-extrabold text-teal-400 text-lg">${item.job}</td>
+                        <td class="py-4 px-6 font-black text-gray-100 text-xl">${item.name}</td>
+                        <td class="py-4 px-6 text-center"><span class="px-3 py-1 rounded-lg text-sm font-black uppercase ${badge}">${item.status}</span></td>
+                        <td class="py-4 px-6 text-gray-200 text-lg font-semibold">${item.remark}</td>
+                    </tr>`;
+            });
+        }
+
+        function renderFilters() {
+            const container = document.getElementById("filterContainer");
+            const categories = [...new Set((window.appState.breakdowns || []).map(item => item.category))];
+            let html = `<button id="btnFilter-ALL" class="bg-amber-500 text-gray-950 px-4 py-2 rounded-xl text-sm font-bold shadow-md">Semua Unit (${window.appState.breakdowns?.length || 0})</button>`;
+            categories.forEach(cat => {
+                const count = window.appState.breakdowns.filter(item => item.category === cat).length;
+                html += `<button id="btnFilter-${cat}" class="bg-gray-800 text-gray-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-700 transition">${cat} (${count})</button>`;
+            });
+            container.innerHTML = html;
+
+            container.querySelectorAll('button').forEach(btn => {
+                btn.onclick = () => {
+                    currentFilter = btn.id.replace('btnFilter-', '');
+                    renderTable(currentFilter);
+                };
+            });
+        }
+
+        function renderTable(filter) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            const data = window.appState.breakdowns || [];
+            const filtered = filter === 'ALL' ? data : data.filter(item => item.category === filter);
+            document.getElementById("rowCountDisplay").innerText = `Menampilkan ${filtered.length} data breakdown`;
+
+            filtered.forEach(item => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-800/60 transition">
+                        <td class="py-5 px-6 text-center font-bold font-mono text-xl">${item.no}</td>
+                        <td class="py-5 px-6 font-extrabold text-amber-500 text-lg">${item.category}</td>
+                        <td class="py-5 px-6 font-mono font-black text-xl text-gray-100">${item.code}</td>
+                        <td class="py-5 px-6 text-center"><span class="px-3 py-1 rounded-lg text-sm font-black bg-red-950 text-red-400">BD</span></td>
+                        <td class="py-5 px-6 text-gray-200 text-lg font-semibold">${item.remark}</td>
+                        <td class="py-5 px-6 font-bold text-gray-400 text-lg"><i class="fas fa-map-marker-alt text-red-500 mr-2"></i>${item.location}</td>
+                    </tr>`;
+            });
+        }
+
+        // TEXT TO SPEECH CONTROLLER
+        function getIndonesianVoice() {
+            return window.speechSynthesis.getVoices().find(v => v.lang.includes('id-ID') || v.name.toLowerCase().includes('indonesia')) || null;
+        }
+
+        window.speakCurrentTabSummary = function() {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let narasi = "";
+            if (window.currentActiveTab === "attendance") {
+                const total = window.appState.attendance?.length || 0;
+                const hadir = total - (window.appState.attendance?.filter(c => c.status !== "Hadir").length || 0);
+                narasi = `Informasi absensi tim. Total kru terdata ${total} orang, dengan ${hadir} orang hadir bertugas di lapangan.`;
+            } else {
+                const bd = window.appState.breakdowns?.length || 0;
+                const ready = window.appState.readyCount || 0;
+                const pa = bd + ready > 0 ? ((ready / (bd + ready)) * 100).toFixed(1) : 0;
+                narasi = `Informasi unit breakdown. Rasio fisikal ketersediaan unit saat ini berada di angka ${pa} persen, dengan ${bd} unit status breakdown.`;
+            }
+            const utterance = new SpeechSynthesisUtterance(narasi);
+            const voice = getIndonesianVoice();
+            if (voice) utterance.voice = voice;
+            utterance.lang = 'id-ID'; utterance.rate = 0.92;
+            window.speechSynthesis.speak(utterance);
+        };
+
+        window.setVoiceLoop = function(setting) {
+            currentVoiceLoopSetting = setting; clearInterval(voiceLoopInterval);
+            ['OFF', '30', '60'].forEach(opt => {
+                document.getElementById(`loopBtn-${opt}`).className = opt === setting ? "py-2 rounded-lg text-xs font-black bg-amber-500 text-gray-950 border border-amber-500" : "py-2 rounded-lg text-xs font-black bg-gray-900 text-gray-400 border border-gray-800";
+            });
+            const badge = document.getElementById("voiceLoopBadge");
+            if (setting === "OFF") { badge.classList.add("hidden"); return; }
+            badge.classList.remove("hidden"); badge.innerHTML = `<i class="fas fa-circle text-[8px]"></i> LOOP ${setting}s`;
+            speakCurrentTabSummary();
+            voiceLoopInterval = setInterval(() => {
+                if (document.getElementById("importModal").classList.contains("hidden")) speakCurrentTabSummary();
+            }, setting === '30' ? 30000 : 60000);
+        };
+
+        // AUTO SCROLL CONTROL
+        window.toggleAutoScroll = function() {
+            const btn = document.getElementById('btnAutoScroll');
+            const icon = document.getElementById('scrollIcon');
+            if (!isScrolling) {
+                isScrolling = true; icon.className = "fas fa-pause text-red-500 animate-pulse text-xl"; btn.querySelector('span').innerText = "Matikan Scroll";
+                autoScrollInterval = setInterval(() => {
+                    if (isPausing) return;
+                    if (window.scrollY + document.documentElement.clientHeight >= document.documentElement.scrollHeight - 3) {
+                        isPausing = true;
+                        setTimeout(() => {
+                            const nextTab = window.currentActiveTab === "attendance" ? "breakdown" : "attendance";
+                            switchTab(nextTab, true); window.scrollTo(0, 0); isPausing = false;
+                        }, 5000);
+                    } else { window.scrollBy({ top: 1.2, behavior: 'auto' }); }
+                }, 25);
+            } else {
+                isScrolling = false; clearInterval(autoScrollInterval); icon.className = "fas fa-play text-emerald-500 text-xl"; btn.querySelector('span').innerText = "Aktifkan Scroll";
+            }
+        };
+
+        window.openModal = function() {
+            document.getElementById("importModal").classList.remove("hidden");
+            document.getElementById("readyCountInput").value = window.appState.readyCount || 0;
+            document.getElementById("shiftInput").value = window.appState.shiftInfo || "";
+        };
+    </script>
+
+    <script>
+        function closeModal() { document.getElementById("importModal").classList.add("hidden"); document.getElementById("excelPasteArea").value = ""; document.getElementById("attendancePasteArea").value = ""; }
+        function toggleMenu() { const s = document.getElementById('sidebarMenu'); s.classList.contains('-translate-x-full') ? (s.classList.remove('-translate-x-full'), document.getElementById('sidebarOverlay').classList.remove('hidden')) : closeMenu(); }
+        function closeMenu() { document.getElementById('sidebarMenu').classList.add('-translate-x-full'); document.getElementById('sidebarOverlay').classList.add('hidden'); }
+        
+        function switchTab(tabName, triggeredByScroll = false) {
+            window.currentActiveTab = tabName;
+            const btnAtt = document.getElementById("tabBtnAttendance"), btnBd = document.getElementById("tabBtnBreakdown");
+            const secAtt = document.getElementById("sectionAttendance"), secBd = document.getElementById("sectionBreakdown");
+
+            if (tabName === "attendance") {
+                btnAtt.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition";
+                btnBd.className = "py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition";
+                secAtt.classList.remove("hidden"); secBd.classList.add("hidden");
+            } else {
+                btnBd.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition";
+                btnAtt.className = "py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition";
+                secBd.classList.remove("hidden"); secAtt.classList.add("hidden");
+            }
+            if(triggeredByScroll && typeof window.speakCurrentTabSummary === "function") window.speakCurrentTabSummary();
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    document.getElementById("fsIcon").className = "fas fa-compress text-xl";
+                    document.getElementById("fsText").innerText = "Keluar Full Screen";
+                });
+            } else { document.exitFullscreen(); }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                document.getElementById("fsIcon").className = "fas fa-expand text-xl";
+                document.getElementById("fsText").innerText = "Layar Penuh (Full Screen)";
+            }
+        });
+
+        setInterval(() => {
+            const now = new Date();
+            const days = ["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"];
+            const months = ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
+            document.getElementById("realtimeClock").innerText = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()} | ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} WITA`;
+        }, 1000);
+
+        // REGISTRASI SERVICE WORKER PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').then(() => console.log("PWA Service Worker Aktif."));
+        }
+
+        // PENGATUR TOMBOL INSTALASI APLIKASI
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); deferredPrompt = e;
+            const btn = document.getElementById('pwaInstallBtn');
+            btn.classList.remove('hidden'); btn.classList.add('flex');
+        });
+        document.getElementById('pwaInstallBtn').addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choice) => {
+                    if (choice.outcome === 'accepted') document.getElementById('pwaInstallBtn').classList.add('hidden');
+                    deferredPrompt = null;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
