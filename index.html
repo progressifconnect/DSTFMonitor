@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DSTF Monitor - Dashboard Panel Utama</title>
+    <title>DSTF Smart Monitor - Dashboard Panel Utama</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#f59e0b">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/6821/6821006.png">
+    <link class="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/6821/6821006.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #090d16; }
@@ -31,7 +32,7 @@
             </div>
             <div>
                 <h1 class="text-2xl lg:text-4xl font-black tracking-wider text-amber-500 uppercase flex items-center gap-3">
-                    DSTF MONITOR <span class="text-sm bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full border border-amber-500/40 hidden md:inline-block">LIVE CLOUD</span>
+                    DSTF SMART MONITOR <span class="text-sm bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full border border-amber-500/40 hidden md:inline-block">LIVE CLOUD</span>
                 </h1>
                 <p class="text-base text-gray-400 mt-1 font-mono flex items-center gap-2">
                     <i class="fas fa-clock text-amber-500/70"></i> <span id="realtimeClock" class="font-bold">Memuat waktu...</span>
@@ -67,8 +68,18 @@
             <div class="flex flex-col gap-4">
                 <button onclick="openModal(); closeMenu();" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 px-4 py-3 rounded-xl text-base font-extrabold flex items-center gap-3 transition active:scale-95 shadow-lg shadow-amber-500/10">
                     <i class="fas fa-file-excel text-xl"></i>
-                    <span>Update Data Excel (Global)</span>
+                    <span>Kelola Data & Excel (Global)</span>
                 </button>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="exportDataJSON()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 py-2.5 px-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-gray-700 transition">
+                        <i class="fas fa-download text-teal-400"></i> Export JSON
+                    </button>
+                    <label class="bg-gray-800 hover:bg-gray-700 text-gray-200 py-2.5 px-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-gray-700 transition cursor-pointer text-center">
+                        <i class="fas fa-upload text-amber-400"></i> Import JSON
+                        <input type="file" accept=".json" class="hidden" onchange="importDataJSON(this)">
+                    </label>
+                </div>
 
                 <button id="btnAutoScroll" onclick="toggleAutoScroll(); closeMenu();" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-3 rounded-xl text-base font-bold flex items-center gap-3 border border-gray-700 transition">
                     <i class="fas fa-play text-emerald-500 text-xl" id="scrollIcon"></i>
@@ -144,6 +155,9 @@
             <button onclick="switchTab('breakdown')" id="tabBtnBreakdown" class="py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition">
                 <i class="fas fa-tools"></i> 2. RINCIAN UNIT BREAKDOWN
             </button>
+            <button onclick="switchTab('media')" id="tabBtnMedia" class="py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition">
+                <i class="fas fa-images"></i> 3. MEDIA MONITOR
+            </button>
         </div>
 
         <section id="sectionAttendance" class="flex flex-col gap-6">
@@ -188,24 +202,61 @@
                 </table>
             </div>
         </section>
+
+        <section id="sectionMedia" class="hidden flex flex-col gap-6">
+            <div class="flex flex-col sm:flex-row gap-4 justify-between bg-gray-900/60 p-5 rounded-2xl border border-gray-800/80">
+                <div class="flex items-center gap-4">
+                    <label class="bg-amber-500 hover:bg-amber-600 text-gray-950 px-5 py-3 rounded-xl text-base font-extrabold flex items-center gap-3 transition active:scale-95 shadow-lg cursor-pointer">
+                        <i class="fas fa-cloud-upload-alt text-xl"></i>
+                        <span>Pilih Foto / Video (Lokal)</span>
+                        <input type="file" id="localMediaInput" accept="video/*,image/*" class="hidden" onchange="handleLocalMediaUpload(this)">
+                    </label>
+                    <button onclick="clearLocalMedia()" class="bg-red-950/60 hover:bg-red-900 border border-red-700/50 text-red-400 px-4 py-3 rounded-xl font-bold text-sm transition">
+                        <i class="fas fa-trash-alt mr-2"></i>Hapus Media
+                    </button>
+                </div>
+                <div class="text-base text-gray-400 font-mono font-bold bg-gray-800 px-4 py-2 rounded-lg flex items-center">
+                    Status Media: &nbsp;<span id="mediaStatus" class="text-amber-500">Kosong</span>
+                </div>
+            </div>
+
+            <div class="bg-gray-900 border-2 border-gray-800 rounded-3xl overflow-hidden p-4 flex justify-center items-center min-h-[500px] shadow-2xl relative">
+                <div id="mediaPlaceholder" class="text-center text-gray-500 flex flex-col gap-3">
+                    <i class="fas fa-photo-video text-6xl text-gray-700 animate-pulse"></i>
+                    <p class="font-bold">Belum ada media yang diunggah secara lokal di monitor ini.</p>
+                </div>
+                <img id="localImageDisplay" class="hidden max-h-[70vh] w-auto object-contain rounded-xl shadow-lg" alt="Local Monitor Display">
+                <video id="localVideoDisplay" class="hidden max-h-[70vh] w-full bg-black rounded-xl shadow-lg" controls autoplay loop muted></video>
+            </div>
+        </section>
     </main>
 
     <div id="importModal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-gray-900 border border-gray-800 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl">
+        <div class="bg-gray-900 border border-gray-800 rounded-3xl w-full max-w-5xl overflow-hidden shadow-2xl">
             <div class="bg-gray-850 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-amber-500 flex items-center gap-3"><i class="fas fa-file-excel text-2xl"></i> Input Data Shift (Global Sync)</h3>
+                <h3 class="text-xl font-bold text-amber-500 flex items-center gap-3"><i class="fas fa-file-excel text-2xl"></i> Kelola & Sinkronisasi Data Shift</h3>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
             </div>
-            <div class="p-6 flex flex-col gap-5 max-h-[75vh] overflow-y-auto">
+            
+            <div class="p-6 flex flex-col gap-5 max-h-[78vh] overflow-y-auto">
+                <div id="excelDropzone" class="border-2 border-dashed border-gray-700 hover:border-amber-500/80 bg-gray-950/50 rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2">
+                    <i class="fas fa-file-import text-4xl text-gray-500" id="dropzoneIcon"></i>
+                    <p class="font-bold text-gray-300 text-sm" id="dropzoneText">Seret & Jatuhkan (Drag & Drop) file Excel (.xlsx / .xls) Anda di sini</p>
+                    <p class="text-xs text-gray-500">Atau klik area ini untuk memilih file secara manual dari komputer</p>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="hidden" onchange="handleExcelFileSelect(this)">
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label class="block text-sm text-gray-400 font-bold mb-2">Total Unit Ready:</label><input type="number" id="readyCountInput" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-gray-200 focus:outline-none focus:border-amber-500"></div>
                     <div><label class="block text-sm text-gray-400 font-bold mb-2">Informasi Shift & Tanggal:</label><input type="text" id="shiftInput" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-gray-200 focus:outline-none focus:border-amber-500"></div>
                 </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
-                    <div class="flex flex-col gap-2"><label class="block text-sm text-amber-400 font-black">1. PASTE DATA ABSENSI:</label><textarea id="attendancePasteArea" rows="8" class="w-full bg-gray-950 border-2 border-gray-800 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:border-amber-500" placeholder="1&#9;Driver DT&#9;Nama&#9;Hadir&#9;Ket Kerja..."></textarea></div>
-                    <div class="flex flex-col gap-2"><label class="block text-sm text-red-400 font-black">2. PASTE DATA BREAKDOWN:</label><textarea id="excelPasteArea" rows="8" class="w-full bg-gray-950 border-2 border-gray-800 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:border-amber-500" placeholder="DT&#9;1&#9;HDT-05&#9;Breakdown&#9;Low Power..."></textarea></div>
+                    <div class="flex flex-col gap-2"><label class="block text-sm text-amber-400 font-black">1. PASTE / PREVIEW ABSENSI:</label><textarea id="attendancePasteArea" rows="6" class="w-full bg-gray-950 border border-gray-800 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:border-amber-500" placeholder="1&#9;Driver DT&#9;Nama&#9;Hadir&#9;Ket Kerja..."></textarea></div>
+                    <div class="flex flex-col gap-2"><label class="block text-sm text-red-400 font-black">2. PASTE / PREVIEW BREAKDOWN:</label><textarea id="excelPasteArea" rows="6" class="w-full bg-gray-950 border border-gray-800 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:border-amber-500" placeholder="DT&#9;1&#9;HDT-05&#9;Breakdown&#9;Low Power..."></textarea></div>
                 </div>
             </div>
+
             <div class="bg-gray-850 px-6 py-4 border-t border-gray-800 flex justify-end gap-4">
                 <button onclick="closeModal()" class="px-5 py-2.5 text-gray-400 hover:text-white">Batal</button>
                 <button onclick="processAllExcelData()" class="bg-amber-500 hover:bg-amber-600 text-gray-950 px-6 py-2.5 rounded-xl font-extrabold shadow-lg shadow-amber-500/20">Kirim Ke Semua Monitor</button>
@@ -231,7 +282,6 @@
         const db = getDatabase(app);
         const stateRef = ref(db, 'dashboard_state');
 
-        // State Master Aplikasi Lokal
         window.appState = { shiftInfo: "", readyCount: 0, attendance: [], breakdowns: [] };
         window.currentActiveTab = "attendance";
         let currentFilter = "ALL";
@@ -239,7 +289,6 @@
         let autoScrollInterval, voiceLoopInterval;
         let isScrolling = false, isPausing = false, scrollDirection = 1, currentVoiceLoopSetting = "OFF";
 
-        // MENGAMBIL DATA SECARA REAL-TIME DARI CLOUD (Fungsi Inti Sync HP/Monitor)
         onValue(stateRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -249,7 +298,40 @@
             }
         });
 
-        // MENGIRIM DATA DARI EXCEL KE CLOUD
+        // ==========================================
+        // EXPORT & IMPORT DATA JSON (GLOBAL FIREBASE)
+        // ==========================================
+        window.exportDataJSON = function() {
+            if(!window.appState) return alert("Tidak ada data untuk diekspor.");
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appState, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `DSTF_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        };
+
+        window.importDataJSON = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (confirm("Apakah Anda yakin ingin memulihkan data ini? Data saat ini di Firebase akan ditimpa.")) {
+                        set(stateRef, parsed).then(() => {
+                            alert("Data berhasil diimport dan disinkronkan ke Firebase!");
+                        });
+                    }
+                } catch (err) {
+                    alert("Gagal membaca file JSON. Format berkas tidak valid.");
+                }
+            };
+            reader.readAsText(file);
+            input.value = ""; // reset
+        };
+
         window.processAllExcelData = function() {
             const bdText = document.getElementById("excelPasteArea").value.trim();
             const attText = document.getElementById("attendancePasteArea").value.trim();
@@ -300,14 +382,12 @@
                 if (parsedData.length > 0) newState.breakdowns = parsedData;
             }
 
-            // Kirim Data ke Firebase Cloud
             set(stateRef, newState).then(() => {
                 closeModal();
                 alert("Data berhasil disinkronkan ke seluruh TV monitor!");
             });
         };
 
-        // UI RENDER FUNCTIONS
         function renderDashboard() {
             document.getElementById("headerShiftInfo").innerText = window.appState.shiftInfo || "BELUM ADA DATA";
             const bdCount = window.appState.breakdowns?.length || 0;
@@ -333,7 +413,6 @@
             renderAttendanceTable(currentAttendanceFilter);
         }
 
-        // Filter & Tabel Generator
         function renderAttendanceFilters() {
             const container = document.getElementById("attendanceFilterContainer");
             const data = window.appState.attendance || [];
@@ -345,7 +424,6 @@
             });
             container.innerHTML = html;
             
-            // Re-bind click events
             container.querySelectorAll('button').forEach(btn => {
                 btn.onclick = () => {
                     const id = btn.id.replace('btnAttFilter-', '');
@@ -416,7 +494,6 @@
             });
         }
 
-        // TEXT TO SPEECH CONTROLLER
         function getIndonesianVoice() {
             return window.speechSynthesis.getVoices().find(v => v.lang.includes('id-ID') || v.name.toLowerCase().includes('indonesia')) || null;
         }
@@ -429,11 +506,13 @@
                 const total = window.appState.attendance?.length || 0;
                 const hadir = total - (window.appState.attendance?.filter(c => c.status !== "Hadir").length || 0);
                 narasi = `Informasi absensi tim. Total kru terdata ${total} orang, dengan ${hadir} orang hadir bertugas di lapangan.`;
-            } else {
+            } else if (window.currentActiveTab === "breakdown") {
                 const bd = window.appState.breakdowns?.length || 0;
                 const ready = window.appState.readyCount || 0;
                 const pa = bd + ready > 0 ? ((ready / (bd + ready)) * 100).toFixed(1) : 0;
                 narasi = `Informasi unit breakdown. Rasio fisikal ketersediaan unit saat ini berada di angka ${pa} persen, dengan ${bd} unit status breakdown.`;
+            } else {
+                narasi = "Menampilkan media promosi atau pengumuman lokal pada monitor.";
             }
             const utterance = new SpeechSynthesisUtterance(narasi);
             const voice = getIndonesianVoice();
@@ -456,7 +535,6 @@
             }, setting === '30' ? 30000 : 60000);
         };
 
-        // AUTO SCROLL CONTROL
         window.toggleAutoScroll = function() {
             const btn = document.getElementById('btnAutoScroll');
             const icon = document.getElementById('scrollIcon');
@@ -467,7 +545,11 @@
                     if (window.scrollY + document.documentElement.clientHeight >= document.documentElement.scrollHeight - 3) {
                         isPausing = true;
                         setTimeout(() => {
-                            const nextTab = window.currentActiveTab === "attendance" ? "breakdown" : "attendance";
+                            let nextTab = "attendance";
+                            if (window.currentActiveTab === "attendance") nextTab = "breakdown";
+                            else if (window.currentActiveTab === "breakdown") nextTab = "media";
+                            else if (window.currentActiveTab === "media") nextTab = "attendance";
+                            
                             switchTab(nextTab, true); window.scrollTo(0, 0); isPausing = false;
                         }, 5000);
                     } else { window.scrollBy({ top: 1.2, behavior: 'auto' }); }
@@ -481,6 +563,7 @@
             document.getElementById("importModal").classList.remove("hidden");
             document.getElementById("readyCountInput").value = window.appState.readyCount || 0;
             document.getElementById("shiftInput").value = window.appState.shiftInfo || "";
+            setupDragAndDrop();
         };
     </script>
 
@@ -491,17 +574,27 @@
         
         function switchTab(tabName, triggeredByScroll = false) {
             window.currentActiveTab = tabName;
-            const btnAtt = document.getElementById("tabBtnAttendance"), btnBd = document.getElementById("tabBtnBreakdown");
-            const secAtt = document.getElementById("sectionAttendance"), secBd = document.getElementById("sectionBreakdown");
+            const btnAtt = document.getElementById("tabBtnAttendance"), 
+                  btnBd = document.getElementById("tabBtnBreakdown"),
+                  btnMed = document.getElementById("tabBtnMedia");
+            const secAtt = document.getElementById("sectionAttendance"), 
+                  secBd = document.getElementById("sectionBreakdown"),
+                  secMed = document.getElementById("sectionMedia");
+
+            [btnAtt, btnBd, btnMed].forEach(b => {
+                if(b) b.className = "py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition";
+            });
+            [secAtt, secBd, secMed].forEach(s => { if(s) s.classList.add("hidden"); });
 
             if (tabName === "attendance") {
                 btnAtt.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition";
-                btnBd.className = "py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition";
-                secAtt.classList.remove("hidden"); secBd.classList.add("hidden");
-            } else {
+                secAtt.classList.remove("hidden");
+            } else if (tabName === "breakdown") {
                 btnBd.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition";
-                btnAtt.className = "py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition";
-                secBd.classList.remove("hidden"); secAtt.classList.add("hidden");
+                secBd.classList.remove("hidden");
+            } else if (tabName === "media") {
+                btnMed.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition";
+                secMed.classList.remove("hidden");
             }
             if(triggeredByScroll && typeof window.speakCurrentTabSummary === "function") window.speakCurrentTabSummary();
         }
@@ -529,12 +622,10 @@
             document.getElementById("realtimeClock").innerText = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()} | ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} WITA`;
         }, 1000);
 
-        // REGISTRASI SERVICE WORKER PWA
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then(() => console.log("PWA Service Worker Aktif."));
         }
 
-        // PENGATUR TOMBOL INSTALASI APLIKASI
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault(); deferredPrompt = e;
@@ -550,6 +641,189 @@
                 });
             }
         });
+
+        // ==========================================
+        // ENGINE DETEKSI DRAG & DROP FILE EXCEL (.XLSX)
+        // ==========================================
+        function setupDragAndDrop() {
+            const dropzone = document.getElementById('excelDropzone');
+            if(!dropzone) return;
+
+            // Memicu jendela dialog file ketika dropzone diklik
+            dropzone.onclick = () => document.getElementById('excelFileInput').click();
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('border-gray-700', 'bg-gray-950/50');
+                    dropzone.classList.add('border-amber-500', 'bg-amber-500/10');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('border-amber-500', 'bg-amber-500/10');
+                    dropzone.classList.add('border-gray-700', 'bg-gray-950/50');
+                }, false);
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if(files.length) processExcelFile(files[0]);
+            });
+        }
+
+        function handleExcelFileSelect(input) {
+            if(input.files.length) processExcelFile(input.files[0]);
+        }
+
+        function processExcelFile(file) {
+            const dropzoneText = document.getElementById('dropzoneText');
+            const dropzoneIcon = document.getElementById('dropzoneIcon');
+            
+            if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+                alert('Format salah! Mohon jatuhkan file Excel (.xlsx atau .xls).');
+                return;
+            }
+
+            dropzoneText.innerText = `Membaca berkas: ${file.name}...`;
+            dropzoneIcon.className = "fas fa-spinner text-amber-500 animate-spin text-4xl";
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Membaca Sheet Pertama untuk Absensi
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet1 = workbook.Sheets[firstSheetName];
+                    // Mengubah menjadi format TSV (Tab-Separated) agar cocok dengan parser bawaan Anda
+                    const tsvText1 = XLSX.utils.sheet_to_txt(worksheet1);
+                    document.getElementById('attendancePasteArea').value = tsvText1;
+
+                    // Membaca Sheet Kedua untuk Breakdown (jika tersedia), jika tidak gunakan sheet 1
+                    const secondSheetName = workbook.SheetNames[1] || workbook.SheetNames[0];
+                    const worksheet2 = workbook.Sheets[secondSheetName];
+                    const tsvText2 = XLSX.utils.sheet_to_txt(worksheet2);
+                    document.getElementById('excelPasteArea').value = tsvText2;
+
+                    dropzoneText.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fas fa-check-circle"></i> Berhasil Memuat ${file.name}</span>`;
+                    dropzoneIcon.className = "fas fa-file-excel text-emerald-400 text-4xl";
+                } catch (err) {
+                    console.error(err);
+                    alert('Gagal mengekstrak data dari file Excel.');
+                    dropzoneText.innerText = "Seret & Jatuhkan (Drag & Drop) file Excel (.xlsx / .xls) Anda di sini";
+                    dropzoneIcon.className = "fas fa-file-import text-4xl text-gray-500";
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // ==========================================
+        // LOCAL ENGINE FOR MEDIA STORAGE (INDEXEDDB)
+        // ==========================================
+        const DB_NAME = "DSTF_LocalMedia_DB";
+        const STORE_NAME = "media_store";
+
+        function getDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (e) => {
+                    e.target.result.createObjectStore(STORE_NAME);
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function handleLocalMediaUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            document.getElementById("mediaStatus").innerText = "Menyimpan...";
+            
+            try {
+                const db = await getDB();
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).put(file, "saved_file");
+                
+                tx.oncomplete = () => {
+                    document.getElementById("mediaStatus").innerText = "Tersimpan";
+                    displayMedia(file);
+                };
+            } catch (err) {
+                console.error("Gagal menyimpan media:", err);
+                alert("Gagal memuat media. Pastikan ukuran file tidak terlalu besar.");
+                document.getElementById("mediaStatus").innerText = "Gagal";
+            }
+        }
+
+        function displayMedia(file) {
+            const placeholder = document.getElementById("mediaPlaceholder");
+            const imgDisplay = document.getElementById("localImageDisplay");
+            const vidDisplay = document.getElementById("localVideoDisplay");
+            
+            if(imgDisplay.src) URL.revokeObjectURL(imgDisplay.src);
+            if(vidDisplay.src) URL.revokeObjectURL(vidDisplay.src);
+
+            placeholder.classList.add("hidden");
+            imgDisplay.classList.add("hidden");
+            vidDisplay.classList.add("hidden");
+
+            const fileURL = URL.createObjectURL(file);
+
+            if (file.type.startsWith("image/")) {
+                imgDisplay.src = fileURL;
+                imgDisplay.classList.remove("hidden");
+                document.getElementById("mediaStatus").innerHTML = `<span class="text-emerald-400"><i class="fas fa-image"></i> Gambar Aktif</span>`;
+            } else if (file.type.startsWith("video/")) {
+                vidDisplay.src = fileURL;
+                vidDisplay.classList.remove("hidden");
+                vidDisplay.load();
+                vidDisplay.play().catch(e => console.log("Autoplay memerlukan interaksi pertama browser."));
+                document.getElementById("mediaStatus").innerHTML = `<span class="text-teal-400"><i class="fas fa-video"></i> Video Aktif</span>`;
+            }
+        }
+
+        async function loadSavedMedia() {
+            try {
+                const db = await getDB();
+                const tx = db.transaction(STORE_NAME, "readonly");
+                const request = tx.objectStore(STORE_NAME).get("saved_file");
+                
+                request.onsuccess = () => {
+                    if (request.result) {
+                        displayMedia(request.result);
+                    }
+                };
+            } catch (err) {
+                console.log("Belum ada media lokal tersimpan.");
+            }
+        }
+
+        async function clearLocalMedia() {
+            if(!confirm("Hapus media dari monitor ini?")) return;
+            try {
+                const db = await getDB();
+                const tx = db.transaction(STORE_NAME, "readwrite");
+                tx.objectStore(STORE_NAME).delete("saved_file");
+                tx.oncomplete = () => {
+                    document.getElementById("localImageDisplay").classList.add("hidden");
+                    document.getElementById("localVideoDisplay").classList.add("hidden");
+                    document.getElementById("localVideoDisplay").src = "";
+                    document.getElementById("mediaPlaceholder").classList.remove("hidden");
+                    document.getElementById("mediaStatus").innerText = "Kosong";
+                    document.getElementById("localMediaInput").value = "";
+                };
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", loadSavedMedia);
     </script>
 </body>
 </html>

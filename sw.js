@@ -1,9 +1,11 @@
-const CACHE_NAME = 'dstf-monitor-v1';
+const CACHE_NAME = 'dstf-monitor-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
   'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+  // TAMBAHKAN LINE DI BAWAH INI:
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];
 
 // Pemasangan Aset Dasar
