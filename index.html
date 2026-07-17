@@ -18,6 +18,43 @@
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
         :-webkit-full-screen { background-color: #030712; }
         ::fullscreen { background-color: #030712; }
+
+        /* TAMPILAN JAM SAAT FULLSCREEN (BESAR, GLOWING, PROFESIONAL) */
+        #fullscreenClockContainer {
+            display: none;
+        }
+
+        :fullscreen header,
+        :fullscreen #tabContainer {
+            display: none !important;
+        }
+        :-webkit-full-screen header,
+        :-webkit-full-screen #tabContainer {
+            display: none !important;
+        }
+
+        /* Aktifkan Jam Besar di Pojok Kanan Atas hanya saat Full Screen */
+        :fullscreen #fullscreenClockContainer {
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 2rem;
+            margin-bottom: 1rem;
+        }
+        :-webkit-full-screen #fullscreenClockContainer {
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 2rem;
+            margin-bottom: 1rem;
+        }
+
+        :fullscreen main {
+            padding-top: 1.5rem;
+        }
+        :-webkit-full-screen main {
+            padding-top: 1.5rem;
+        }
     </style>
 </head>
 <body class="bg-[#030712] text-gray-100 font-sans min-h-screen flex flex-col transition-all duration-300 overflow-x-hidden">
@@ -35,7 +72,7 @@
                     DSTF SMART MONITOR <span class="text-sm bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full border border-amber-500/40 hidden md:inline-block">LIVE CLOUD</span>
                 </h1>
                 <p class="text-base text-gray-400 mt-1 font-mono flex items-center gap-2">
-                    <i class="fas fa-clock text-amber-500/70"></i> <span id="realtimeClock" class="font-bold">Memuat waktu...</span>
+                    <i class="fas fa-clock text-amber-500/70"></i> <span id="realtimeClockHeader" class="font-bold">Memuat waktu...</span>
                 </p>
             </div>
         </div>
@@ -71,13 +108,14 @@
                     <span>Kelola Data & Excel (Global)</span>
                 </button>
 
+                <!-- EXPORT & IMPORT FORMAT CSV -->
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="exportDataJSON()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 py-2.5 px-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-gray-700 transition">
-                        <i class="fas fa-download text-teal-400"></i> Export JSON
+                    <button onclick="exportDataCSV()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 py-2.5 px-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-gray-700 transition">
+                        <i class="fas fa-file-csv text-teal-400"></i> Export CSV
                     </button>
                     <label class="bg-gray-800 hover:bg-gray-700 text-gray-200 py-2.5 px-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-gray-700 transition cursor-pointer text-center">
-                        <i class="fas fa-upload text-amber-400"></i> Import JSON
-                        <input type="file" accept=".json" class="hidden" onchange="importDataJSON(this)">
+                        <i class="fas fa-upload text-amber-400"></i> Import CSV
+                        <input type="file" accept=".csv" class="hidden" onchange="importDataCSV(this)">
                     </label>
                 </div>
 
@@ -117,6 +155,14 @@
 
     <main class="flex-1 p-6 lg:p-8 max-w-[1920px] mx-auto w-full flex flex-col gap-8">
         
+        <!-- CONTAINER JAM BESAR KHUSUS MODE FULL SCREEN -->
+        <div id="fullscreenClockContainer" class="w-full">
+            <div class="bg-gray-900/85 border-2 border-amber-500/30 px-6 py-3.5 rounded-2xl flex items-center gap-4 shadow-xl shadow-amber-500/5">
+                <i class="fas fa-clock text-amber-500 text-3xl animate-pulse"></i>
+                <span id="realtimeClockFS" class="text-2xl lg:text-3xl font-mono font-black tracking-widest text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.35)]">Memuat waktu...</span>
+            </div>
+        </div>
+
         <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div class="lg:col-span-4 bg-gradient-to-br from-amber-950/40 to-gray-950 border-2 border-amber-500/30 p-6 rounded-3xl flex flex-col justify-between shadow-2xl">
                 <div>
@@ -148,7 +194,8 @@
             </div>
         </section>
 
-        <div class="flex border-b border-gray-800 gap-4">
+        <!-- MENU NAVIGASI TAB UTAMA (AKAN DI-HIDDEN SAAT FULLSCREEN) -->
+        <div class="flex border-b border-gray-800 gap-4" id="tabContainer">
             <button onclick="switchTab('attendance')" id="tabBtnAttendance" class="py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition">
                 <i class="fas fa-clipboard-user"></i> 1. ABSENSI & PLOTTING TIM
             </button>
@@ -298,38 +345,119 @@
             }
         });
 
-        // ==========================================
-        // EXPORT & IMPORT DATA JSON (GLOBAL FIREBASE)
-        // ==========================================
-        window.exportDataJSON = function() {
+        /* ======================== FUNGSI EXPORT TO CSV ======================== */
+        window.exportDataCSV = function() {
             if(!window.appState) return alert("Tidak ada data untuk diekspor.");
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.appState, null, 2));
+            
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // 1. Bagian Info Global
+            csvContent += `GLOBAL INFO\n`;
+            csvContent += `Shift Info;${window.appState.shiftInfo || ""}\n`;
+            csvContent += `Ready Unit Count;${window.appState.readyCount || 0}\n\n`;
+            
+            // 2. Bagian Absensi
+            csvContent += `DATA ABSENSI\n`;
+            csvContent += `No;Jabatan;Nama;Status;Keterangan\n`;
+            const attList = window.appState.attendance || [];
+            attList.forEach(item => {
+                csvContent += `${item.no};"${item.job}";"${item.name}";"${item.status}";"${item.remark}"\n`;
+            });
+            
+            csvContent += `\n`;
+
+            // 3. Bagian Breakdown
+            csvContent += `DATA BREAKDOWN\n`;
+            csvContent += `No;Kategori;Kode Unit;Status;Kerusakan;Lokasi\n`;
+            const bdList = window.appState.breakdowns || [];
+            bdList.forEach(item => {
+                csvContent += `${item.no};"${item.category}";"${item.code}";"${item.status}";"${item.remark}";"${item.location}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
             const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `DSTF_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            downloadAnchor.setAttribute("href", encodedUri);
+            downloadAnchor.setAttribute("download", `DSTF_Backup_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
         };
 
-        window.importDataJSON = function(input) {
+        /* ======================== FUNGSI IMPORT FROM CSV ======================== */
+        window.importDataCSV = function(input) {
             const file = input.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (confirm("Apakah Anda yakin ingin memulihkan data ini? Data saat ini di Firebase akan ditimpa.")) {
-                        set(stateRef, parsed).then(() => {
-                            alert("Data berhasil diimport dan disinkronkan ke Firebase!");
+                    const text = e.target.result;
+                    const lines = text.split("\n");
+                    
+                    let parsedState = {
+                        shiftInfo: "",
+                        readyCount: 0,
+                        attendance: [],
+                        breakdowns: []
+                    };
+                    
+                    let activeSection = "";
+
+                    for(let i=0; i < lines.length; i++) {
+                        let line = lines[i].trim();
+                        if (!line) continue;
+
+                        // Deteksi perpindahan bagian
+                        if (line.startsWith("GLOBAL INFO")) { activeSection = "GLOBAL"; continue; }
+                        if (line.startsWith("DATA ABSENSI")) { activeSection = "ABSENSI"; continue; }
+                        if (line.startsWith("DATA BREAKDOWN")) { activeSection = "BREAKDOWN"; continue; }
+
+                        // Parse isi bagian
+                        if (activeSection === "GLOBAL") {
+                            let cols = line.split(";");
+                            if (cols[0] === "Shift Info") parsedState.shiftInfo = cols[1] || "";
+                            if (cols[0] === "Ready Unit Count") parsedState.readyCount = parseInt(cols[1]) || 0;
+                        } 
+                        else if (activeSection === "ABSENSI") {
+                            if (line.startsWith("No;")) continue; // Skip header tabel
+                            let cols = line.split(";").map(c => c.replace(/^"|"$/g, '').trim()); // Hilangkan tanda kutip dua
+                            if (cols.length >= 5) {
+                                parsedState.attendance.push({
+                                    no: parseInt(cols[0]) || 1,
+                                    job: cols[1],
+                                    name: cols[2],
+                                    status: cols[3],
+                                    remark: cols[4]
+                                });
+                            }
+                        } 
+                        else if (activeSection === "BREAKDOWN") {
+                            if (line.startsWith("No;")) continue; // Skip header tabel
+                            let cols = line.split(";").map(c => c.replace(/^"|"$/g, '').trim()); // Hilangkan tanda kutip dua
+                            if (cols.length >= 6) {
+                                parsedState.breakdowns.push({
+                                    no: parseInt(cols[0]) || 1,
+                                    category: cols[1],
+                                    code: cols[2],
+                                    status: cols[3],
+                                    remark: cols[4],
+                                    location: cols[5]
+                                });
+                            }
+                        }
+                    }
+
+                    if (confirm("Apakah Anda yakin ingin memulihkan data dari CSV ini? Seluruh data di Firebase TV Monitor akan diperbarui.")) {
+                        set(stateRef, parsedState).then(() => {
+                            alert("Data dari CSV berhasil diimport dan disinkronkan ke seluruh TV Monitor!");
                         });
                     }
                 } catch (err) {
-                    alert("Gagal membaca file JSON. Format berkas tidak valid.");
+                    console.error(err);
+                    alert("Gagal memproses file CSV. Pastikan struktur format file CSV valid.");
                 }
             };
             reader.readAsText(file);
-            input.value = ""; // reset
+            input.value = ""; // Reset input
         };
 
         window.processAllExcelData = function() {
@@ -547,8 +675,7 @@
                         setTimeout(() => {
                             let nextTab = "attendance";
                             if (window.currentActiveTab === "attendance") nextTab = "breakdown";
-                            else if (window.currentActiveTab === "breakdown") nextTab = "media";
-                            else if (window.currentActiveTab === "media") nextTab = "attendance";
+                            else if (window.currentActiveTab === "breakdown") nextTab = "attendance";
                             
                             switchTab(nextTab, true); window.scrollTo(0, 0); isPausing = false;
                         }, 5000);
@@ -615,11 +742,15 @@
             }
         });
 
+        // UPDATE KEDUA JAM (HEADER & FULLSCREEN) SEKALIGUS SETIAP DETIK
         setInterval(() => {
             const now = new Date();
             const days = ["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"];
             const months = ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
-            document.getElementById("realtimeClock").innerText = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()} | ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} WITA`;
+            const timeString = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()} | ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} WITA`;
+            
+            document.getElementById("realtimeClockHeader").innerText = timeString;
+            document.getElementById("realtimeClockFS").innerText = timeString;
         }, 1000);
 
         if ('serviceWorker' in navigator) {
@@ -642,14 +773,10 @@
             }
         });
 
-        // ==========================================
-        // ENGINE DETEKSI DRAG & DROP FILE EXCEL (.XLSX)
-        // ==========================================
         function setupDragAndDrop() {
             const dropzone = document.getElementById('excelDropzone');
             if(!dropzone) return;
 
-            // Memicu jendela dialog file ketika dropzone diklik
             dropzone.onclick = () => document.getElementById('excelFileInput').click();
 
             ['dragenter', 'dragover'].forEach(eventName => {
@@ -697,14 +824,11 @@
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
                     
-                    // Membaca Sheet Pertama untuk Absensi
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet1 = workbook.Sheets[firstSheetName];
-                    // Mengubah menjadi format TSV (Tab-Separated) agar cocok dengan parser bawaan Anda
                     const tsvText1 = XLSX.utils.sheet_to_txt(worksheet1);
                     document.getElementById('attendancePasteArea').value = tsvText1;
 
-                    // Membaca Sheet Kedua untuk Breakdown (jika tersedia), jika tidak gunakan sheet 1
                     const secondSheetName = workbook.SheetNames[1] || workbook.SheetNames[0];
                     const worksheet2 = workbook.Sheets[secondSheetName];
                     const tsvText2 = XLSX.utils.sheet_to_txt(worksheet2);
@@ -722,9 +846,6 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // ==========================================
-        // LOCAL ENGINE FOR MEDIA STORAGE (INDEXEDDB)
-        // ==========================================
         const DB_NAME = "DSTF_LocalMedia_DB";
         const STORE_NAME = "media_store";
 
