@@ -19,42 +19,15 @@
         :-webkit-full-screen { background-color: #030712; }
         ::fullscreen { background-color: #030712; }
 
-        /* TAMPILAN JAM SAAT FULLSCREEN (BESAR, GLOWING, PROFESIONAL) */
-        #fullscreenClockContainer {
-            display: none;
-        }
+        #fullscreenClockContainer { display: none; }
+        :fullscreen header, :fullscreen #tabContainer { display: none !important; }
+        :-webkit-full-screen header, :-webkit-full-screen #tabContainer { display: none !important; }
 
-        :fullscreen header,
-        :fullscreen #tabContainer {
-            display: none !important;
-        }
-        :-webkit-full-screen header,
-        :-webkit-full-screen #tabContainer {
-            display: none !important;
-        }
+        :fullscreen #fullscreenClockContainer { display: flex !important; align-items: center; justify-content: flex-end; padding: 0 2rem; margin-bottom: 1rem; }
+        :-webkit-full-screen #fullscreenClockContainer { display: flex !important; align-items: center; justify-content: flex-end; padding: 0 2rem; margin-bottom: 1rem; }
 
-        /* Aktifkan Jam Besar di Pojok Kanan Atas hanya saat Full Screen */
-        :fullscreen #fullscreenClockContainer {
-            display: flex !important;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 0 2rem;
-            margin-bottom: 1rem;
-        }
-        :-webkit-full-screen #fullscreenClockContainer {
-            display: flex !important;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 0 2rem;
-            margin-bottom: 1rem;
-        }
-
-        :fullscreen main {
-            padding-top: 1.5rem;
-        }
-        :-webkit-full-screen main {
-            padding-top: 1.5rem;
-        }
+        :fullscreen main { padding-top: 1.5rem; }
+        :-webkit-full-screen main { padding-top: 1.5rem; }
     </style>
 </head>
 <body class="bg-[#030712] text-gray-100 font-sans min-h-screen flex flex-col transition-all duration-300 overflow-x-hidden">
@@ -108,7 +81,6 @@
                     <span>Kelola Data & Excel (Global)</span>
                 </button>
 
-                <!-- EXPORT & IMPORT FORMAT CSV -->
                 <div class="grid grid-cols-2 gap-2">
                     <button onclick="exportDataCSV()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 py-2.5 px-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-gray-700 transition">
                         <i class="fas fa-file-csv text-teal-400"></i> Export CSV
@@ -155,7 +127,6 @@
 
     <main class="flex-1 p-6 lg:p-8 max-w-[1920px] mx-auto w-full flex flex-col gap-8">
         
-        <!-- CONTAINER JAM BESAR KHUSUS MODE FULL SCREEN -->
         <div id="fullscreenClockContainer" class="w-full">
             <div class="bg-gray-900/85 border-2 border-amber-500/30 px-6 py-3.5 rounded-2xl flex items-center gap-4 shadow-xl shadow-amber-500/5">
                 <i class="fas fa-clock text-amber-500 text-3xl animate-pulse"></i>
@@ -194,7 +165,6 @@
             </div>
         </section>
 
-        <!-- MENU NAVIGASI TAB UTAMA (AKAN DI-HIDDEN SAAT FULLSCREEN) -->
         <div class="flex border-b border-gray-800 gap-4" id="tabContainer">
             <button onclick="switchTab('attendance')" id="tabBtnAttendance" class="py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition">
                 <i class="fas fa-clipboard-user"></i> 1. ABSENSI & PLOTTING TIM
@@ -345,18 +315,14 @@
             }
         });
 
-        /* ======================== FUNGSI EXPORT TO CSV ======================== */
         window.exportDataCSV = function() {
             if(!window.appState) return alert("Tidak ada data untuk diekspor.");
             
             let csvContent = "data:text/csv;charset=utf-8,";
-            
-            // 1. Bagian Info Global
             csvContent += `GLOBAL INFO\n`;
             csvContent += `Shift Info;${window.appState.shiftInfo || ""}\n`;
             csvContent += `Ready Unit Count;${window.appState.readyCount || 0}\n\n`;
             
-            // 2. Bagian Absensi
             csvContent += `DATA ABSENSI\n`;
             csvContent += `No;Jabatan;Nama;Status;Keterangan\n`;
             const attList = window.appState.attendance || [];
@@ -364,10 +330,7 @@
                 csvContent += `${item.no};"${item.job}";"${item.name}";"${item.status}";"${item.remark}"\n`;
             });
             
-            csvContent += `\n`;
-
-            // 3. Bagian Breakdown
-            csvContent += `DATA BREAKDOWN\n`;
+            csvContent += `\nDATA BREAKDOWN\n`;
             csvContent += `No;Kategori;Kode Unit;Status;Kerusakan;Lokasi\n`;
             const bdList = window.appState.breakdowns || [];
             bdList.forEach(item => {
@@ -383,7 +346,6 @@
             downloadAnchor.remove();
         };
 
-        /* ======================== FUNGSI IMPORT FROM CSV ======================== */
         window.importDataCSV = function(input) {
             const file = input.files[0];
             if (!file) return;
@@ -393,46 +355,45 @@
                     const text = e.target.result;
                     const lines = text.split("\n");
                     
-                    let parsedState = {
-                        shiftInfo: "",
-                        readyCount: 0,
-                        attendance: [],
-                        breakdowns: []
-                    };
-                    
+                    let parsedState = { shiftInfo: "", readyCount: 0, attendance: [], breakdowns: [] };
                     let activeSection = "";
 
                     for(let i=0; i < lines.length; i++) {
                         let line = lines[i].trim();
                         if (!line) continue;
-
-                        // Deteksi perpindahan bagian
                         if (line.startsWith("GLOBAL INFO")) { activeSection = "GLOBAL"; continue; }
                         if (line.startsWith("DATA ABSENSI")) { activeSection = "ABSENSI"; continue; }
                         if (line.startsWith("DATA BREAKDOWN")) { activeSection = "BREAKDOWN"; continue; }
 
-                        // Parse isi bagian
                         if (activeSection === "GLOBAL") {
                             let cols = line.split(";");
                             if (cols[0] === "Shift Info") parsedState.shiftInfo = cols[1] || "";
                             if (cols[0] === "Ready Unit Count") parsedState.readyCount = parseInt(cols[1]) || 0;
                         } 
                         else if (activeSection === "ABSENSI") {
-                            if (line.startsWith("No;")) continue; // Skip header tabel
-                            let cols = line.split(";").map(c => c.replace(/^"|"$/g, '').trim()); // Hilangkan tanda kutip dua
+                            if (line.startsWith("No;")) continue;
+                            let cols = line.split(";").map(c => c.replace(/^"|"$/g, '').trim());
                             if (cols.length >= 5) {
+                                let ketKerja = cols[4] || "";
+                                let statusHadir = cols[3]; // Default
+                                const ketLower = ketKerja.toLowerCase();
+                                
+                                if (ketLower.includes("sakit")) statusHadir = "Sakit";
+                                else if (ketLower.includes("izin") || ketLower.includes("ijin")) statusHadir = "Izin";
+                                else if (ketLower.includes("alpa") || ketLower.includes("mangkir") || ketLower.includes("tanpa keterangan")) statusHadir = "Alpa";
+                                
                                 parsedState.attendance.push({
                                     no: parseInt(cols[0]) || 1,
                                     job: cols[1],
                                     name: cols[2],
-                                    status: cols[3],
-                                    remark: cols[4]
+                                    status: statusHadir,
+                                    remark: ketKerja
                                 });
                             }
                         } 
                         else if (activeSection === "BREAKDOWN") {
-                            if (line.startsWith("No;")) continue; // Skip header tabel
-                            let cols = line.split(";").map(c => c.replace(/^"|"$/g, '').trim()); // Hilangkan tanda kutip dua
+                            if (line.startsWith("No;")) continue;
+                            let cols = line.split(";").map(c => c.replace(/^"|"$/g, '').trim());
                             if (cols.length >= 6) {
                                 parsedState.breakdowns.push({
                                     no: parseInt(cols[0]) || 1,
@@ -446,18 +407,13 @@
                         }
                     }
 
-                    if (confirm("Apakah Anda yakin ingin memulihkan data dari CSV ini? Seluruh data di Firebase TV Monitor akan diperbarui.")) {
-                        set(stateRef, parsedState).then(() => {
-                            alert("Data dari CSV berhasil diimport dan disinkronkan ke seluruh TV Monitor!");
-                        });
+                    if (confirm("Apakah Anda yakin ingin memulihkan data dari CSV ini?")) {
+                        set(stateRef, parsedState).then(() => { alert("Data berhasil diimport!"); });
                     }
-                } catch (err) {
-                    console.error(err);
-                    alert("Gagal memproses file CSV. Pastikan struktur format file CSV valid.");
-                }
+                } catch (err) { alert("Gagal memproses file CSV."); }
             };
             reader.readAsText(file);
-            input.value = ""; // Reset input
+            input.value = "";
         };
 
         window.processAllExcelData = function() {
@@ -475,9 +431,19 @@
                     const cols = line.split("\t");
                     if (cols.length >= 3) {
                         if (cols[0].toLowerCase().includes("no")) return;
+                        
                         let ketKerja = cols[4] ? cols[4].trim() : "Standby/Operasi";
                         let statusHadir = "Hadir";
-                        if (["sakit", "izin", "alpa"].includes(ketKerja.toLowerCase())) statusHadir = ketKerja;
+                        const ketLower = ketKerja.toLowerCase();
+
+                        if (ketLower.includes("sakit")) {
+                            statusHadir = "Sakit";
+                        } else if (ketLower.includes("izin") || ketLower.includes("ijin")) {
+                            statusHadir = "Izin";
+                        } else if (ketLower.includes("alpa") || ketLower.includes("mangkir") || ketLower.includes("tanpa keterangan")) {
+                            statusHadir = "Alpa";
+                        }
+
                         parsedAtt.push({
                             no: parseInt(cols[0]) || 1,
                             job: cols[1]?.trim() || "Crew",
@@ -530,7 +496,7 @@
             document.getElementById("paProgressBar").style.width = paRatio + "%";
 
             const attData = window.appState.attendance || [];
-            const absenCrew = attData.filter(c => ["sakit", "izin", "alpa"].includes(c.status.toLowerCase())).length;
+            const absenCrew = attData.filter(c => ["Sakit", "Izin", "Alpa"].includes(c.status)).length;
             document.getElementById("statManTotal").innerText = attData.length;
             document.getElementById("statManHadir").innerText = attData.length - absenCrew;
             document.getElementById("statManAbsen").innerText = absenCrew;
@@ -551,7 +517,6 @@
                 html += `<button id="btnAttFilter-${job.replace(/\s+/g, '')}" class="bg-gray-800 text-gray-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-700 transition">${job} (${count})</button>`;
             });
             container.innerHTML = html;
-            
             container.querySelectorAll('button').forEach(btn => {
                 btn.onclick = () => {
                     const id = btn.id.replace('btnAttFilter-', '');
@@ -570,8 +535,8 @@
 
             filtered.forEach(item => {
                 let badge = "bg-emerald-950 text-emerald-400";
-                if(item.status.toLowerCase() === "sakit") badge = "bg-amber-950 text-amber-400";
-                if(["izin","alpa"].includes(item.status.toLowerCase())) badge = "bg-red-950 text-red-400";
+                if(item.status === "Sakit") badge = "bg-amber-950 text-amber-400";
+                if(["Izin","Alpa"].includes(item.status)) badge = "bg-red-950 text-red-400";
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-800/60 transition">
@@ -593,7 +558,6 @@
                 html += `<button id="btnFilter-${cat}" class="bg-gray-800 text-gray-300 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-700 transition">${cat} (${count})</button>`;
             });
             container.innerHTML = html;
-
             container.querySelectorAll('button').forEach(btn => {
                 btn.onclick = () => {
                     currentFilter = btn.id.replace('btnFilter-', '');
@@ -676,7 +640,6 @@
                             let nextTab = "attendance";
                             if (window.currentActiveTab === "attendance") nextTab = "breakdown";
                             else if (window.currentActiveTab === "breakdown") nextTab = "attendance";
-                            
                             switchTab(nextTab, true); window.scrollTo(0, 0); isPausing = false;
                         }, 5000);
                     } else { window.scrollBy({ top: 1.2, behavior: 'auto' }); }
@@ -701,28 +664,13 @@
         
         function switchTab(tabName, triggeredByScroll = false) {
             window.currentActiveTab = tabName;
-            const btnAtt = document.getElementById("tabBtnAttendance"), 
-                  btnBd = document.getElementById("tabBtnBreakdown"),
-                  btnMed = document.getElementById("tabBtnMedia");
-            const secAtt = document.getElementById("sectionAttendance"), 
-                  secBd = document.getElementById("sectionBreakdown"),
-                  secMed = document.getElementById("sectionMedia");
-
-            [btnAtt, btnBd, btnMed].forEach(b => {
-                if(b) b.className = "py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition";
-            });
+            const btnAtt = document.getElementById("tabBtnAttendance"), btnBd = document.getElementById("tabBtnBreakdown"), btnMed = document.getElementById("tabBtnMedia");
+            const secAtt = document.getElementById("sectionAttendance"), secBd = document.getElementById("sectionBreakdown"), secMed = document.getElementById("sectionMedia");
+            [btnAtt, btnBd, btnMed].forEach(b => { if(b) b.className = "py-3 px-6 text-xl font-black border-b-4 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-3 transition"; });
             [secAtt, secBd, secMed].forEach(s => { if(s) s.classList.add("hidden"); });
-
-            if (tabName === "attendance") {
-                btnAtt.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition";
-                secAtt.classList.remove("hidden");
-            } else if (tabName === "breakdown") {
-                btnBd.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition";
-                secBd.classList.remove("hidden");
-            } else if (tabName === "media") {
-                btnMed.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition";
-                secMed.classList.remove("hidden");
-            }
+            if (tabName === "attendance") { btnAtt.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition"; secAtt.classList.remove("hidden"); } 
+            else if (tabName === "breakdown") { btnBd.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition"; secBd.classList.remove("hidden"); } 
+            else if (tabName === "media") { btnMed.className = "py-3 px-6 text-xl font-black border-b-4 border-amber-500 text-amber-500 flex items-center gap-3 transition"; secMed.classList.remove("hidden"); }
             if(triggeredByScroll && typeof window.speakCurrentTabSummary === "function") window.speakCurrentTabSummary();
         }
 
@@ -742,208 +690,81 @@
             }
         });
 
-        // UPDATE KEDUA JAM (HEADER & FULLSCREEN) SEKALIGUS SETIAP DETIK
         setInterval(() => {
             const now = new Date();
             const days = ["MINGGU", "SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"];
             const months = ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
             const timeString = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')} ${months[now.getMonth()]} ${now.getFullYear()} | ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')} WITA`;
-            
             document.getElementById("realtimeClockHeader").innerText = timeString;
             document.getElementById("realtimeClockFS").innerText = timeString;
         }, 1000);
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').then(() => console.log("PWA Service Worker Aktif."));
-        }
-
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); deferredPrompt = e;
-            const btn = document.getElementById('pwaInstallBtn');
-            btn.classList.remove('hidden'); btn.classList.add('flex');
-        });
-        document.getElementById('pwaInstallBtn').addEventListener('click', () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choice) => {
-                    if (choice.outcome === 'accepted') document.getElementById('pwaInstallBtn').classList.add('hidden');
-                    deferredPrompt = null;
-                });
-            }
-        });
-
         function setupDragAndDrop() {
             const dropzone = document.getElementById('excelDropzone');
             if(!dropzone) return;
-
             dropzone.onclick = () => document.getElementById('excelFileInput').click();
-
             ['dragenter', 'dragover'].forEach(eventName => {
-                dropzone.addEventListener(eventName, (e) => {
-                    e.preventDefault();
-                    dropzone.classList.remove('border-gray-700', 'bg-gray-950/50');
-                    dropzone.classList.add('border-amber-500', 'bg-amber-500/10');
-                }, false);
+                dropzone.addEventListener(eventName, (e) => { e.preventDefault(); dropzone.classList.remove('border-gray-700', 'bg-gray-950/50'); dropzone.classList.add('border-amber-500', 'bg-amber-500/10'); }, false);
             });
-
             ['dragleave', 'drop'].forEach(eventName => {
-                dropzone.addEventListener(eventName, (e) => {
-                    e.preventDefault();
-                    dropzone.classList.remove('border-amber-500', 'bg-amber-500/10');
-                    dropzone.classList.add('border-gray-700', 'bg-gray-950/50');
-                }, false);
+                dropzone.addEventListener(eventName, (e) => { e.preventDefault(); dropzone.classList.remove('border-amber-500', 'bg-amber-500/10'); dropzone.classList.add('border-gray-700', 'bg-gray-950/50'); }, false);
             });
-
-            dropzone.addEventListener('drop', (e) => {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                if(files.length) processExcelFile(files[0]);
-            });
+            dropzone.addEventListener('drop', (e) => { const dt = e.dataTransfer; const files = dt.files; if(files.length) processExcelFile(files[0]); });
         }
 
-        function handleExcelFileSelect(input) {
-            if(input.files.length) processExcelFile(input.files[0]);
-        }
-
+        function handleExcelFileSelect(input) { if(input.files.length) processExcelFile(input.files[0]); }
         function processExcelFile(file) {
             const dropzoneText = document.getElementById('dropzoneText');
             const dropzoneIcon = document.getElementById('dropzoneIcon');
-            
-            if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-                alert('Format salah! Mohon jatuhkan file Excel (.xlsx atau .xls).');
-                return;
-            }
-
-            dropzoneText.innerText = `Membaca berkas: ${file.name}...`;
-            dropzoneIcon.className = "fas fa-spinner text-amber-500 animate-spin text-4xl";
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet1 = workbook.Sheets[firstSheetName];
-                    const tsvText1 = XLSX.utils.sheet_to_txt(worksheet1);
-                    document.getElementById('attendancePasteArea').value = tsvText1;
-
-                    const secondSheetName = workbook.SheetNames[1] || workbook.SheetNames[0];
-                    const worksheet2 = workbook.Sheets[secondSheetName];
-                    const tsvText2 = XLSX.utils.sheet_to_txt(worksheet2);
-                    document.getElementById('excelPasteArea').value = tsvText2;
-
-                    dropzoneText.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fas fa-check-circle"></i> Berhasil Memuat ${file.name}</span>`;
-                    dropzoneIcon.className = "fas fa-file-excel text-emerald-400 text-4xl";
-                } catch (err) {
-                    console.error(err);
-                    alert('Gagal mengekstrak data dari file Excel.');
-                    dropzoneText.innerText = "Seret & Jatuhkan (Drag & Drop) file Excel (.xlsx / .xls) Anda di sini";
-                    dropzoneIcon.className = "fas fa-file-import text-4xl text-gray-500";
-                }
+                    const worksheet1 = workbook.Sheets[workbook.SheetNames[0]];
+                    document.getElementById('attendancePasteArea').value = XLSX.utils.sheet_to_txt(worksheet1);
+                    const worksheet2 = workbook.Sheets[workbook.SheetNames[1] || workbook.SheetNames[0]];
+                    document.getElementById('excelPasteArea').value = XLSX.utils.sheet_to_txt(worksheet2);
+                    dropzoneText.innerHTML = `<span class="text-emerald-400 font-bold"><i class="fas fa-check-circle"></i> Berhasil Memuat</span>`;
+                } catch (err) { alert('Gagal membaca Excel.'); }
             };
             reader.readAsArrayBuffer(file);
         }
 
         const DB_NAME = "DSTF_LocalMedia_DB";
         const STORE_NAME = "media_store";
-
-        function getDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, 1);
-                request.onupgradeneeded = (e) => {
-                    e.target.result.createObjectStore(STORE_NAME);
-                };
-                request.onsuccess = (e) => resolve(e.target.result);
-                request.onerror = (e) => reject(e.target.error);
-            });
-        }
-
+        function getDB() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, 1); request.onupgradeneeded = (e) => { e.target.result.createObjectStore(STORE_NAME); }; request.onsuccess = (e) => resolve(e.target.result); request.onerror = (e) => reject(e.target.error); }); }
         async function handleLocalMediaUpload(input) {
             const file = input.files[0];
             if (!file) return;
-
-            document.getElementById("mediaStatus").innerText = "Menyimpan...";
-            
-            try {
-                const db = await getDB();
-                const tx = db.transaction(STORE_NAME, "readwrite");
-                tx.objectStore(STORE_NAME).put(file, "saved_file");
-                
-                tx.oncomplete = () => {
-                    document.getElementById("mediaStatus").innerText = "Tersimpan";
-                    displayMedia(file);
-                };
-            } catch (err) {
-                console.error("Gagal menyimpan media:", err);
-                alert("Gagal memuat media. Pastikan ukuran file tidak terlalu besar.");
-                document.getElementById("mediaStatus").innerText = "Gagal";
-            }
+            const db = await getDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).put(file, "saved_file");
+            tx.oncomplete = () => { displayMedia(file); };
         }
-
         function displayMedia(file) {
-            const placeholder = document.getElementById("mediaPlaceholder");
             const imgDisplay = document.getElementById("localImageDisplay");
             const vidDisplay = document.getElementById("localVideoDisplay");
-            
-            if(imgDisplay.src) URL.revokeObjectURL(imgDisplay.src);
-            if(vidDisplay.src) URL.revokeObjectURL(vidDisplay.src);
-
-            placeholder.classList.add("hidden");
-            imgDisplay.classList.add("hidden");
-            vidDisplay.classList.add("hidden");
-
+            document.getElementById("mediaPlaceholder").classList.add("hidden");
             const fileURL = URL.createObjectURL(file);
-
-            if (file.type.startsWith("image/")) {
-                imgDisplay.src = fileURL;
-                imgDisplay.classList.remove("hidden");
-                document.getElementById("mediaStatus").innerHTML = `<span class="text-emerald-400"><i class="fas fa-image"></i> Gambar Aktif</span>`;
-            } else if (file.type.startsWith("video/")) {
-                vidDisplay.src = fileURL;
-                vidDisplay.classList.remove("hidden");
-                vidDisplay.load();
-                vidDisplay.play().catch(e => console.log("Autoplay memerlukan interaksi pertama browser."));
-                document.getElementById("mediaStatus").innerHTML = `<span class="text-teal-400"><i class="fas fa-video"></i> Video Aktif</span>`;
-            }
+            if (file.type.startsWith("image/")) { imgDisplay.src = fileURL; imgDisplay.classList.remove("hidden"); } 
+            else if (file.type.startsWith("video/")) { vidDisplay.src = fileURL; vidDisplay.classList.remove("hidden"); vidDisplay.play(); }
         }
-
         async function loadSavedMedia() {
             try {
                 const db = await getDB();
                 const tx = db.transaction(STORE_NAME, "readonly");
                 const request = tx.objectStore(STORE_NAME).get("saved_file");
-                
-                request.onsuccess = () => {
-                    if (request.result) {
-                        displayMedia(request.result);
-                    }
-                };
-            } catch (err) {
-                console.log("Belum ada media lokal tersimpan.");
-            }
+                request.onsuccess = () => { if (request.result) displayMedia(request.result); };
+            } catch (err) { }
         }
-
         async function clearLocalMedia() {
-            if(!confirm("Hapus media dari monitor ini?")) return;
-            try {
-                const db = await getDB();
-                const tx = db.transaction(STORE_NAME, "readwrite");
-                tx.objectStore(STORE_NAME).delete("saved_file");
-                tx.oncomplete = () => {
-                    document.getElementById("localImageDisplay").classList.add("hidden");
-                    document.getElementById("localVideoDisplay").classList.add("hidden");
-                    document.getElementById("localVideoDisplay").src = "";
-                    document.getElementById("mediaPlaceholder").classList.remove("hidden");
-                    document.getElementById("mediaStatus").innerText = "Kosong";
-                    document.getElementById("localMediaInput").value = "";
-                };
-            } catch (err) {
-                console.error(err);
-            }
+            if(!confirm("Hapus media?")) return;
+            const db = await getDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).delete("saved_file");
+            tx.oncomplete = () => { location.reload(); };
         }
-
         window.addEventListener("DOMContentLoaded", loadSavedMedia);
     </script>
 </body>

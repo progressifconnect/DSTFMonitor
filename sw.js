@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dstf-monitor-v2.1';
+const CACHE_NAME = 'dstf-monitor-v2.2';
 const ASSETS = [
   './index.html',
   './manifest.json',
